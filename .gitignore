@@ -1,0 +1,14 @@
+# Generated simulation/build artifacts
+build/*.vvp
+build/*.log
+build/*.vcd
+board_build/impl/
+board_build/.cache/
+
+# Temporary ROM backups
+board_images/*.backup
+board_images/test_program.hex.*
+
+# Local editor/tool files
+*.tmp
+*.bak

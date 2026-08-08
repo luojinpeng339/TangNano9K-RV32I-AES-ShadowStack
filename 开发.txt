@@ -1,0 +1,191 @@
+周期 1：IF   取 aes32esmi
+周期 2：ID   译码、读 x5 / x6、识别 ESMI 和 bs=2
+周期 3：EX   S-box + MixColumns-partial + rotate + XOR
+周期 4：MEM  不访存，结果直通
+周期 5：WB   结果写到 x10
+第 1 条 AES：EX
+第 2 条 AES：ID
+第 3 条指令：IF
+aes32esmi x10, x5,  x6, 2
+aes32esmi x11, x10, x7, 1   // 立刻读取上一条刚写的 x10
+EX/MEM 的新结果
+     │
+     └────→ 下一条指令 EX 阶段
+ Day 1  ✅ 标准寄存器字段 + ESI/ESMI 的 Python 金标 + 测试向量
+Day 2  ① 控制器识别 ESI / ESMI
+       ② 把 crypto_en / crypto_op / bs 穿过 ID/EX
+       ③ 写 aes32_fu.v
+       ④ EX 选择 ALU 或 AES 结果
+       ⑤ 先单独仿真 AES 功能单元
+
+Day 3  ① CPU 执行一条 AES 指令
+       ② 测试连续 AES 的 forwarding
+       ③ 解决 CPU-only 仿真环境
+
+后续   ① aes32ks1i / aes32ks2
+       ② 密钥扩展 K0 → K10
+       ③ AES-128 标准明密文验证
+       ④ FPGA 综合、时序和性能测试
+       4. 从“取指”开始，CPU 怎么执行一条 AES 指令？
+你的 CPU 是五级流水线：
+
+复制
+IF → ID → EX → MEM → WB
+取指   译码   执行   访存   写回
+以这条为例：
+
+复制
+aes32esmi x10, x5, x6, 2
+它的含义是：
+
+复制
+rd  = x10    结果最终写入 x10
+rs1 = x5     累加/XOR 的旧值
+rs2 = x6     从中挑一个输入字节
+bs  = 2      选择 x6 的第 2 个 byte
+注意 bs=2 选择的是：
+
+复制
+x6[23:16]
+不是 CPU 里的“第二个寄存器”。
+
+IF：Instruction Fetch，取指
+复制
+PC
+ │
+ ▼
+instr_mem
+ │
+ ▼
+取回 32 位机器码
+CPU 根据程序计数器 PC 从指令存储器取一条 32 位指令：
+
+复制
+32-bit aes32esmi instruction
+然后 PC = PC + 4，准备取下一条。
+
+此时 CPU 只知道“拿到了 32 位数据”，不知道它是 ADD 还是 AES。
+
+ID：Instruction Decode，译码和读寄存器
+到了 id_stage.v，CPU 把 32 位指令切开：
+
+复制
+31       30 29      25 24    20 19    15 14   12 11      7 6      0
++----------+----------+--------+--------+-------+--------+--------+
+| bs[1:0]  | funct5   |  rs2   |  rs1   | funct3|   rd   | opcode |
++----------+----------+--------+--------+-------+--------+--------+
+对于这条：
+
+复制
+aes32esmi x10, x5, x6, 2
+译码阶段得到：
+
+复制
+opcode  = 0110011       标准 R 型大类
+rd      = 10            x10
+rs1     = 5             x5
+rs2     = 6             x6
+funct3  = 000
+funct5  = 10011         表示 ESMI
+bs      = 2             选 rs2 的 byte 2
+然后寄存器堆真正读出：
+
+复制
+rd1_d = x5 的 32 位值
+rd2_d = x6 的 32 位值
+同时 control_unit.v 识别：
+
+复制
+crypto_en = 1
+crypto_op = 1           1 表示 aes32esmi
+这就是我们现在在做的“识别 AES 指令”。
+
+ID/EX：流水线寄存器
+译码得到的数据不会直接冲到 EX，而是先跨过一拍的寄存器：
+
+复制
+rs1 数值、rs2 数值、rd 编号、bs、crypto_en、crypto_op
+                         │
+                         ▼
+                       ID/EX
+所以之后我们会改 id_ex_reg.v，给它增加几个要锁存的信号：
+
+复制
+crypto_en_d  → crypto_en_e
+crypto_op_d  → crypto_op_e
+bs_d         → bs_e
+这一步很关键。
+
+若不把它们锁存，EX 阶段可能已经在处理上一条 AES 指令，但拿到的却是下一条指令的 bs 或操作类型——流水线经典错配 bug。
+
+EX：真正计算 AES 的地方
+这是以后我们会新写的模块，例如：
+
+复制
+aes32_fu.v
+输入：
+
+复制
+rs1 = x5 的值
+rs2 = x6 的值
+bs  = 2
+op  = ESMI
+内部操作：
+
+复制
+1. 选字节：
+   selected = rs2[23:16]
+
+2. S-box：
+   s = AES_SBOX(selected)
+
+3. 若是 ESMI：
+   mixed = {3*s, s, s, 2*s}
+   rotated = rol32(mixed, 16)
+
+   若是 ESI：
+   rotated = rol32({24'b0, s}, 16)
+
+4. 异或累加：
+   result = rs1 XOR rotated
+然后 EX 阶段选择：
+
+复制
+若 crypto_en=0：正常 ALU 的结果
+若 crypto_en=1：AES 功能单元的结果
+它们共同走同一根结果总线：
+
+复制
+aluresult_e
+这很好，因为后面的流水线基本不用重写。
+
+MEM：访存阶段
+对于普通指令：
+
+复制
+lw / sw
+这里才会和数据存储器交互。
+
+但 AES 指令没有读写内存，所以：
+
+复制
+AES result
+    │
+    └── 直接穿过 MEM 阶段
+它仍然经过 EX/MEM 寄存器，只是没有触发 mem_read 或 mem_write。
+
+WB：Write Back，写回寄存器
+最后，结果写回：
+
+复制
+AES 运算结果
+    │
+    ▼
+register_file[x10] <= result
+所以：
+
+复制
+aes32esmi x10, x5, x6, 2
+执行完成后，x10 得到新值。
+
+下一条 AES 指令可以把 x10 当作新的 rs1，继续 XOR 累积，这样许多 AES 指令组合起来就会形成一整轮。
