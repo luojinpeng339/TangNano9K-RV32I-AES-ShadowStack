@@ -1,7 +1,7 @@
 //============================================================================  
 // Module          : ex_stage  
-// Auteur          : ZYY_2034580440  
-// Créé le         : 2024.03.17  
+// Author          : Luo Jinpeng  
+// Provenance      : Original work; header normalized 2026-08
 // Design Notes    : Execution stage with extensible datapath for DIV/FPU.  
 //                  Main ALU handles integer ops, aux units for DIV/FP.  
 //                  Forwarding network supports multi-cycle operations.  

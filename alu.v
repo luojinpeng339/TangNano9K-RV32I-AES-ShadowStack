@@ -1,7 +1,7 @@
 //============================================================================  
 // Module          : alu  
-// Auteur          : ZYY_2034580440  
-// Créé le         : 2024.03.19  
+// Author          : Luo Jinpeng  
+// Provenance      : Original work; header normalized 2026-08
 // Design Notes    : Arithmetic Logic Unit with DIV/FPU operation stubs.  
 //                  Base integer operations implemented, DIV/FP reserved.  
 //                  Zero flag supports DIV-by-zero detection.  

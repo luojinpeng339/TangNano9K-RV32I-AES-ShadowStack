@@ -1,7 +1,7 @@
 //============================================================================  
 // Module          : mem_stage  
-// Author          : ZYY_2034580440 / Luo & Lan  
-// Created         : 2024.03.16 / Updated 2026.07.28
+// Author          : Luo Jinpeng  
+// Provenance      : Original work; header normalized 2026-08
 // Design Notes    : Memory stage with data RAM + GPU MMIO integration.
 //                  Address map:
 //                    0x000–0x2FF → data memory (RAM)

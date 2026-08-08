@@ -105,6 +105,12 @@ Set-Location C:\Users\Administrator\Desktop\CPU\board_build
 
 The final images are in `board_images/`. Do not overwrite the current `test_program.hex` without backing it up first; see `board_images/README.md`.
 
+## Authorship and development notes
+
+The RTL, board integration, verification and documentation in this repository are original work by **Luo Jinpeng**. During development, AI tools were used as assistants for interface wiring, refactoring checks and debugging; they are not code authors or copyright holders.
+
+Some historical source headers were incorrectly rewritten during an earlier AI-assisted cleanup. They have been normalized to reflect the actual project authorship.
+
 ## Scope and honest limitations
 
 - The shadow stack protects the first-version canonical ABI return form only; generalized indirect-CFI is deferred.

@@ -1,7 +1,7 @@
 //============================================================================  
 // Module          : wb_stage  
-// Auteur          : ZYY_2034580440  
-// Créé le         : 2024.03.15  
+// Author          : Luo Jinpeng  
+// Provenance      : Original work; header normalized 2026-08
 // Design Notes    : Write-back stage with extensible result sources for future  
 //                  FPU and divider integration. Supports 5-to-8 result types.  
 //                  Zero-extension handles custom RV32IMFD extensions.  
