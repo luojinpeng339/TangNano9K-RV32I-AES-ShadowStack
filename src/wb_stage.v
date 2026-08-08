@@ -1,6 +1,6 @@
 //============================================================================  
 // Module          : wb_stage  
-// Author          : Luo Jinpeng  
+// Author          : Jinpeng Luo  
 // Provenance      : Original work; header normalized 2026-08
 // Design Notes    : Write-back stage with extensible result sources for future  
 //                  FPU and divider integration. Supports 5-to-8 result types.  

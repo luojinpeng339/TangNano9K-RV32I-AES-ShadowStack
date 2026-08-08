@@ -1,7 +1,7 @@
 
 //============================================================================  
 // Module          : control_unit  
-// Author          : Luo Jinpeng  
+// Author          : Jinpeng Luo  
 // Provenance      : Original work; header normalized 2026-08
 // Design Notes    : Extended control unit for RV32IMFD instruction set.  
 //                  Generates DIV/FPU control signals with hazard awareness.  

@@ -107,7 +107,7 @@ The final images are in `board_images/`. Do not overwrite the current `src\test_
 
 ## Authorship and development notes
 
-The RTL, board integration, verification and documentation in this repository are original work by **Luo Jinpeng**. During development, AI tools were used as assistants for interface wiring, refactoring checks and debugging; they are not code authors or copyright holders.
+The RTL, board integration, verification and documentation in this repository are original work by **Jinpeng Luo**. During development, AI tools were used as assistants for interface wiring, refactoring checks and debugging; they are not code authors or copyright holders.
 
 Some historical source headers were incorrectly rewritten during an earlier AI-assisted cleanup. They have been normalized to reflect the actual project authorship.
 

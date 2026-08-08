@@ -1,6 +1,6 @@
 //============================================================================  
 // Module          : mem_stage  
-// Author          : Luo Jinpeng  
+// Author          : Jinpeng Luo  
 // Provenance      : Original work; header normalized 2026-08
 // Design Notes    : Memory stage with data RAM + GPU MMIO integration.
 //                  Address map:

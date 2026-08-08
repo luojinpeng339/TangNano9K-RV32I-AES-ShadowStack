@@ -1,6 +1,6 @@
 //============================================================================  
 // Module          : id_stage  
-// Author          : Luo Jinpeng  
+// Author          : Jinpeng Luo  
 // Provenance      : Original work; header normalized 2026-08  
 // Design Notes    : Instruction decode with RV32IMFD extension awareness.  
 //                  Control unit produces extended signals for DIV/FPU.  

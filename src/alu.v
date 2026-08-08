@@ -1,6 +1,6 @@
 //============================================================================  
 // Module          : alu  
-// Author          : Luo Jinpeng  
+// Author          : Jinpeng Luo  
 // Provenance      : Original work; header normalized 2026-08
 // Design Notes    : Arithmetic Logic Unit with DIV/FPU operation stubs.  
 //                  Base integer operations implemented, DIV/FP reserved.  
