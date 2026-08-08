@@ -20,8 +20,8 @@ To rebuild one image:
 
 ```powershell
 Set-Location C:\Users\Administrator\Desktop\CPU
-Copy-Item test_program.hex board_images\test_program.hex.backup -Force
-Copy-Item board_images\shadow_normal.hex test_program.hex -Force
+Copy-Item src\test_program.hex board_images\test_program.hex.backup -Force
+Copy-Item board_images\shadow_normal.hex src\test_program.hex -Force
 Set-Location board_build
 & 'D:\Gowin_edu\Gowin\Gowin_V1.9.11.03_Education_x64\IDE\bin\gw_sh.exe' build_fs.tcl
 ```

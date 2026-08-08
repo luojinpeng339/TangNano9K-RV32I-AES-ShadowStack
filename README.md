@@ -50,8 +50,8 @@ H=1, AR=00000000, SO=00000001, CC=00000001, CV=00000001
 ## Repository layout
 
 ```text
-*.v                         Core RTL and AES modules
-*.hex                       Current ROM image / small workload images
+src/                         Core RTL, AES modules and default ROM image
+board_images/*.hex           Reproducible board workload images
 board_images/               Reproducible workload hex and final .fs files
 board_build/                Standalone Gowin project and generated build output
 build/                      Simulation testbenches and generated local artifacts
@@ -75,7 +75,7 @@ Examples:
 Set-Location C:\Users\Administrator\Desktop\CPU
 C:\iverilog\bin\iverilog.exe -g2012 -s tb_top_pipeline_shadow_normal_counters `
   -o build\tb_top_pipeline_shadow_normal_counters.vvp `
-  build\tb_top_pipeline_shadow_normal_counters.v *.v
+  build\tb_top_pipeline_shadow_normal_counters.v src\*.v
 C:\iverilog\bin\vvp.exe build\tb_top_pipeline_shadow_normal_counters.vvp
 ```
 
@@ -103,7 +103,7 @@ Set-Location C:\Users\Administrator\Desktop\CPU\board_build
 & 'D:\Gowin_edu\Gowin\Gowin_V1.9.11.03_Education_x64\IDE\bin\gw_sh.exe' build_fs.tcl
 ```
 
-The final images are in `board_images/`. Do not overwrite the current `test_program.hex` without backing it up first; see `board_images/README.md`.
+The final images are in `board_images/`. Do not overwrite the current `src\test_program.hex` without backing it up first; see `board_images/README.md`.
 
 ## Authorship and development notes
 
