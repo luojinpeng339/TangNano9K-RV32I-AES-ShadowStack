@@ -105,11 +105,11 @@ Set-Location C:\Users\Administrator\Desktop\CPU\board_build
 
 The final images are in `board_images/`. Do not overwrite the current `src\test_program.hex` without backing it up first; see `board_images/README.md`.
 
-## Authorship and development notes
+## OS-0D development note
 
-The RTL, board integration, verification and documentation in this repository are original work by **Jinpeng Luo**. During development, AI tools were used as assistants for interface wiring, refactoring checks and debugging; they are not code authors or copyright holders.
-
-Some historical source headers were incorrectly rewritten during an earlier AI-assisted cleanup. They have been normalized to reflect the actual project authorship.
+The interactive OS-0D layer — UART line-buffer command monitor, `status`,
+`aes`, `attack`, and the live 800×480 security dashboard — was completed with
+GPT-5.6 assistance as part of this course-project evolution.
 
 ## Scope and honest limitations
 
@@ -120,4 +120,7 @@ Some historical source headers were incorrectly rewritten during an earlier AI-a
 
 ## Next stage
 
-The hardware-security CPU is now frozen as the platform for the next phase: a minimal RV32I bare-metal runtime / operating-system experiment. See `docs/OS_ROADMAP.md`.
+The course-project baseline now includes the interactive OS-0D experiment and
+live security dashboard. Next work can extend the RAM-backed command surface
+(`ls`, `cat <name>`) and add reproducible performance/security experiment
+scripts.
