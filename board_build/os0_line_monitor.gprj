@@ -1,0 +1,46 @@
+<?xml version="1" encoding="UTF-8"?>
+<!DOCTYPE gowin-fpga-project>
+<Project>
+    <Template>FPGA</Template>
+    <Version>5</Version>
+    <Device name="GW1NR-9C" pn="GW1NR-LV9QN88PC6/I5">gw1nr9c-004</Device>
+    <FileList>
+        <File path="../src/aes32_fu.v" type="file.verilog" enable="1"/>
+        <File path="../src/aes32_ks1i_fu.v" type="file.verilog" enable="1"/>
+        <File path="../src/aes_sbox.v" type="file.verilog" enable="1"/>
+        <File path="../src/alu.v" type="file.verilog" enable="1"/>
+        <File path="../src/bios_text_renderer.v" type="file.verilog" enable="1"/>
+        <File path="../src/branch_prediction.v" type="file.verilog" enable="1"/>
+        <File path="../src/control_unit.v" type="file.verilog" enable="1"/>
+        <File path="../src/data_mem.v" type="file.verilog" enable="1"/>
+        <File path="../src/diagnostic_renderer.v" type="file.verilog" enable="1"/>
+        <File path="../src/ex_mem_reg.v" type="file.verilog" enable="1"/>
+        <File path="../src/ex_stage.v" type="file.verilog" enable="1"/>
+        <File path="../src/extend.v" type="file.verilog" enable="1"/>
+        <File path="../src/gpu_stub.v" type="file.verilog" enable="1"/>
+        <File path="../src/hazard_unit.v" type="file.verilog" enable="1"/>
+        <File path="../src/id_ex_reg.v" type="file.verilog" enable="1"/>
+        <File path="../src/id_stage.v" type="file.verilog" enable="1"/>
+        <File path="../src/if_id_reg.v" type="file.verilog" enable="1"/>
+        <File path="../src/if_stage.v" type="file.verilog" enable="1"/>
+        <File path="../src/instr_mem.v" type="file.verilog" enable="1"/>
+        <File path="../src/mem_stage.v" type="file.verilog" enable="1"/>
+        <File path="../src/mem_wb_reg.v" type="file.verilog" enable="1"/>
+        <File path="../src/register_file.v" type="file.verilog" enable="1"/>
+        <File path="../src/rgb_scanout.v" type="file.verilog" enable="1"/>
+        <File path="../src/scanline_stress_renderer.v" type="file.verilog" enable="1"/>
+        <File path="../src/shadow_stack_control.v" type="file.verilog" enable="1"/>
+        <File path="../src/shadow_stack_mem.v" type="file.verilog" enable="1"/>
+        <File path="../src/top_pipeline.v" type="file.verilog" enable="1"/>
+        <File path="../src/text_stress_renderer.v" type="file.verilog" enable="1"/>
+        <File path="../src/uart_status_reporter.v" type="file.verilog" enable="1"/>
+        <File path="../src/uart_rx.v" type="file.verilog" enable="1"/>
+        <File path="../src/uart_tx.v" type="file.verilog" enable="1"/>
+        <File path="../src/uart_mmio.v" type="file.verilog" enable="1"/>
+        <File path="../src/wb_stage.v" type="file.verilog" enable="1"/>
+        <File path="../pipeline.cst.cst" type="file.cst" enable="1"/>
+        <File path="pipeline.sdc" type="file.sdc" enable="1"/>
+        <File path="../src/security_status_mmio.v" type="file.verilog" enable="1"/>
+        <File path="../board_images/os0_line_monitor.hex" type="file.other" enable="1"/>
+    </FileList>
+</Project>

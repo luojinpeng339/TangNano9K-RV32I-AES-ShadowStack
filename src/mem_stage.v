@@ -2,10 +2,11 @@
 // Module          : mem_stage  
 // Author          : Jinpeng Luo  
 // Provenance      : Original work; header normalized 2026-08
-// Design Notes    : Memory stage with data RAM + GPU MMIO integration.
+// Design Notes    : Memory stage with data RAM + OS-0 MMIO integration.
 //                  Address map:
-//                    0x000–0x2FF → data memory (RAM)
-//                    0x400–0x4FF → GPU MMIO
+//                    0x000–0xFFF → data memory (RAM)
+//                    0x1000–0x10FF → UART MMIO
+//                    0x1100–0x11FF → security/status MMIO
 //============================================================================  
 module mem_stage(
     input  wire        clk,
@@ -13,6 +14,7 @@ module mem_stage(
     input  wire        reg_write_m,
     input  wire [1:0]  result_src_m,
     input  wire        mem_write_m,
+    input  wire        mem_read_m,
     input  wire [31:0] alu_result_m,
     input  wire [31:0] write_data_m,
     input  wire [4:0]  rd_m,
@@ -29,9 +31,16 @@ module mem_stage(
     output wire        rgb_de,
     output wire        lcd_reset_n,
     output wire        lcd_disp,
-    output wire [4:0]  rgb_r,
-    output wire [5:0]  rgb_g,
-    output wire [4:0]  rgb_b,
+    input  wire        uart_rx,
+    output wire        uart_tx,
+    input  wire        security_halted,
+    input  wire [31:0] mcycle,
+    input  wire [31:0] minstret,
+    input  wire [31:0] aes_retired_count,
+    input  wire [31:0] shadow_push_pop_count,
+    input  wire [31:0] cfi_check_count,
+    input  wire [31:0] cfi_violation_count,
+    input  wire [5:0]  shadow_depth,
 
     // ---- Pipeline outputs ----
     output wire [4:0]  rd_w_out,
@@ -42,19 +51,21 @@ module mem_stage(
     
     // ================================================================
     // 1. Address decoding
-    //    GPU MMIO: 0x400 – 0x4FF
-    //    Data RAM: everything else that fits in 10-bit addr width
+    //    UART MMIO: 0x1000 – 0x10FF
+    //    Data RAM: all remaining addresses in the current OS-0 map
     // ================================================================
-    wire gpu_sel;
-    assign gpu_sel = (alu_result_m[31:8] == 24'h000004);
+    wire uart_sel;
+    assign uart_sel = (alu_result_m[31:8] == 24'h000010);
+    wire security_sel;
+    assign security_sel = (alu_result_m[31:8] == 24'h000011);
 
     wire data_mem_we;
-    assign data_mem_we = mem_write_m && !gpu_sel;
+    assign data_mem_we = mem_write_m && !uart_sel && !security_sel;
 
-    wire gpu_we;
-    wire gpu_re;
-    assign gpu_we = mem_write_m && gpu_sel;
-    assign gpu_re = !mem_write_m && gpu_sel;
+    wire uart_we;
+    wire uart_re;
+    assign uart_we = mem_write_m && uart_sel;
+    assign uart_re = mem_read_m && uart_sel;
 
     // ================================================================
     // 2. Pipeline passthrough
@@ -81,33 +92,40 @@ module mem_stage(
     );
 
     // ================================================================
-    // 4. GPU MMIO peripheral (addresses 0x400–0x4FF)
+    // 4. UART MMIO peripheral (0x1000–0x10FF)
     // ================================================================
-    wire [31:0] gpu_rdata;
+    wire [31:0] uart_rdata;
 
-    gpu_top u_gpu_top (
-        .clk      (clk),
-        .rst_n    (rst_n),
-        .gpu_sel  (gpu_sel),
-        .gpu_we   (gpu_we),
-        .gpu_re   (gpu_re),
-        .gpu_addr (alu_result_m[7:2]),
-        .gpu_wdata(write_data_m),
-        .gpu_rdata(gpu_rdata),
-        .rgb_pclk (rgb_pclk),
-        .rgb_hsync(rgb_hsync),
-        .rgb_vsync(rgb_vsync),
-        .rgb_de   (rgb_de),
-        .lcd_reset_n(lcd_reset_n),
-        .lcd_disp (lcd_disp),
-        .rgb_r    (rgb_r),
-        .rgb_g    (rgb_g),
-        .rgb_b    (rgb_b)
+    uart_mmio u_uart_mmio (
+        .clk       (clk),
+        .rst_n     (rst_n),
+        .uart_rx   (uart_rx),
+        .uart_tx   (uart_tx),
+        .mmio_we   (uart_we),
+        .mmio_re   (uart_re),
+        .mmio_addr (alu_result_m[3:2]),
+        .mmio_wdata(write_data_m),
+        .mmio_rdata(uart_rdata)
+    );
+
+    wire [31:0] security_rdata;
+    security_status_mmio u_security_status_mmio (
+        .security_halted       (security_halted),
+        .mcycle                (mcycle),
+        .minstret              (minstret),
+        .aes_retired_count     (aes_retired_count),
+        .shadow_push_pop_count (shadow_push_pop_count),
+        .cfi_check_count       (cfi_check_count),
+        .cfi_violation_count   (cfi_violation_count),
+        .shadow_depth          (shadow_depth),
+        .mmio_addr             (alu_result_m[6:2]),
+        .mmio_rdata            (security_rdata)
     );
 
     // ================================================================
-    // 5. Read data mux: GPU overrides data_mem when selected
+    // 5. Read data mux: MMIO overrides data RAM when selected
     // ================================================================
-    assign read_data_m = gpu_sel ? gpu_rdata : data_mem_rdata;
+    assign read_data_m = uart_sel ? uart_rdata :
+                         security_sel ? security_rdata : data_mem_rdata;
 
 endmodule

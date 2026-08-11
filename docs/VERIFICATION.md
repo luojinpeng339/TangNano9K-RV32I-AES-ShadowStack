@@ -23,7 +23,12 @@ The old copied workspace under `D:\Agent\fpga_projects\riscv_zkne_cpu` is not au
 | Shadow-stack controller | `TB_SHADOW_STACK_CONTROL_LOGIC_PASS` |
 | Normal nested calls + counters | `TOP_PIPELINE_SHADOW_NORMAL_COUNTERS_PASS`, `ssops=4`, `cfi_checks=2`, `cfi_violations=0` |
 | Attack + counters | `TOP_PIPELINE_SHADOW_ATTACK_BLOCK_PASS`, `ssops=1`, `cfi_checks=1`, `cfi_violations=1` |
-| UART reporter | `UART_STATUS_REPORTER_SMOKE_PASS bytes=92` |
+| OS-0 UART welcome + echo | `TOP_PIPELINE_UART_WELCOME_ECHO_PASS` |
+| OS-0 `status` parser + UART response | `TOP_PIPELINE_UART_STATUS_SCANNER_PASS`, malformed command suppressed, full report `H/MC/MI/AR/SO/CC/CV/SD` |
+| OS-0 `help` command | `TOP_PIPELINE_UART_HELP_PASS`, output `help: help status` |
+| OS-0D `aes` / `attack` security demonstrations | **Board verified 2026-08-11**: `aes<CR>` returns `AES OK` and `AR` increases after real AES32 retirement; after reset, `attack<CR>` drives protected-return mismatch → `HALT=1`, `CV=1`, red dashboard halt indication, and UART stops as designed |
+| Security-status MMIO register bank | `TB_SECURITY_STATUS_MMIO_PASS` |
+| Security-status MMIO through five-stage pipeline | `TOP_PIPELINE_SECURITY_MMIO_PASS`, live `mcycle` load |
 | Cold-start normal workload | `h=0 ir=1368 so=4 cc=2 cv=0 ssp=0` |
 | Cold-start attack workload | `h=1 ir=3 so=1 cc=1 cv=1 ssp=1` |
 
@@ -33,7 +38,8 @@ The old copied workspace under `D:\Agent\fpga_projects\riscv_zkne_cpu` is not au
 |---|---|
 | `security_cpu_aes_forwarding.fs` | `H=0`, `AR=2`, `SO=0`, `CC=0`, `CV=0` |
 | `security_cpu_shadow_normal.fs` | `H=0`, `AR=0`, `SO=4`, `CC=2`, `CV=0` |
-| `security_cpu_shadow_attack.fs` | `H=1`, `AR=0`, `SO=1`, `CC=1`, `CV=1` |
+| `os0_security_demos.fs` | **Board verified 2026-08-11**: UART/dashboard OS with two security demonstrations: `aes` → AES32 retirement (`AR` rises), `attack` → CFI violation (`HALT=1`, `CV=1`, red dashboard; reset required) |
+| `os0_security_demos.hex` | ROM source paired with `os0_security_demos.fs`; includes `help`, `status`, `aes`, and fail-stop `attack` commands |
 
 All three final images were rebuilt after the `instr_mem.v` cold-start fix on 2026-08-08.
 

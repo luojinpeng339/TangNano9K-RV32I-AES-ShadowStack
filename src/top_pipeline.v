@@ -3,6 +3,7 @@
 module top_pipeline(
     input  wire        clk,
     input  wire        rst_n,
+    input  wire        uart_rx,
     output wire        uart_tx,
     output wire        rgb_pclk,
     output wire        rgb_hsync,
@@ -21,6 +22,8 @@ module top_pipeline(
 
 
     wire [31:0] pc_f, pc_plus_4_f, instr_f;
+    wire [31:0] pc_rom_f, pc_plus_4_rom_f;
+    wire        instr_valid_f;
     wire [31:0] pc_d, pc_plus_4_d, instr_d;
     wire valid_d, valid_e, valid_m, valid_w;
     wire [31:0] pc_plus_4_e, pc_plus_4_m, pc_plus_4_w;
@@ -72,6 +75,7 @@ module top_pipeline(
     wire [31:0] shadow_top_ra;
     wire        shadow_empty;
     wire        shadow_full;
+    wire [5:0]  shadow_depth;
     wire        shadow_push_ok;
     wire        shadow_pop_ok;
     wire        shadow_overflow_fault;
@@ -95,14 +99,25 @@ module top_pipeline(
     end
     wire [6:0]  opcode_d;
     wire [6:0]  opcode_e;
+
+    // Retirement-accurate experiment counters, exposed read-only at 0x1100.
+    reg [31:0] mcycle;
+    reg [31:0] minstret;
+    reg [31:0] aes_retired_count;
+    reg [31:0] shadow_push_pop_count;
+    reg [31:0] cfi_check_count;
+    reg [31:0] cfi_violation_count;
+
     // ---- 分支预测信号声明 ----
     wire pred_taken_f;             // BHT预测结果（1=跳）
     wire btb_hit_f;                // BTB命中
     wire [31:0] btb_target_f;      // BTB缓存的目标地址
     wire [31:0] branch_pc_e;       // EX阶段的分支PC（从pc_e_in取）
     assign branch_pc_e = pc_e_in;
-    wire use_predict = pred_taken_f & btb_hit_f;
-    wire [31:0] predicted_target = btb_target_f;
+// OS-0 baseline: disable speculative branch prediction.
+// IF always follows PC+4 until EX resolves a real branch/jump.
+    wire use_predict = 1'b0;
+    wire [31:0] predicted_target = 32'd0;
     wire branch_mispredicted;
 
     // ===============================================================
@@ -112,12 +127,15 @@ module top_pipeline(
         .use_predict(use_predict),
         .predicted_target(predicted_target),
         .clk(clk), .rst_n(rst_n), .stall_f(stall_f_safe), .pcsrc_e(pcsrc_e), .pctarget_e(pctarget_e),
-        .pc_f(pc_f), .pc_plus_4_f(pc_plus_4_f), .instr_f(instr_f)
+        .pc_f(pc_f), .pc_plus_4_f(pc_plus_4_f),
+        .pc_rom_f(pc_rom_f), .pc_plus_4_rom_f(pc_plus_4_rom_f),
+        .instr_valid_f(instr_valid_f), .instr_f(instr_f)
     );
     if_id_reg u_if_id_reg (
         .clk(clk), .rst_n(rst_n), .flush_d(flush_d_safe), .stall_d(stall_d),
-        .pc_f(pc_f),
-        .instr_f(instr_f), .pc_plus_4_f(pc_plus_4_f),
+        .pc_f(pc_rom_f),
+        .instr_f(instr_f), .pc_plus_4_f(pc_plus_4_rom_f),
+        .instr_valid_f(instr_valid_f),
          .pc_d(pc_d),
         .instr_d(instr_d), .pc_plus_4_d(pc_plus_4_d),
         .valid_d(valid_d)
@@ -175,6 +193,7 @@ module top_pipeline(
         .top_ra          (shadow_top_ra),
         .empty           (shadow_empty),
         .full            (shadow_full),
+        .depth           (shadow_depth),
 
         .push_ok         (shadow_push_ok),
         .pop_ok          (shadow_pop_ok),
@@ -220,16 +239,20 @@ module top_pipeline(
     );
     mem_stage u_mem_stage (
         .clk(clk), .rst_n(rst_n), .reg_write_m(reg_write_m), .result_src_m(result_src_m), .mem_write_m(mem_write_m),
+        .mem_read_m(mem_read_m), .uart_rx(uart_rx), .uart_tx(uart_tx),
+        .security_halted(security_halted), .mcycle(mcycle), .minstret(minstret),
+        .aes_retired_count(aes_retired_count), .shadow_push_pop_count(shadow_push_pop_count),
+        .cfi_check_count(cfi_check_count), .cfi_violation_count(cfi_violation_count),
+        .shadow_depth(shadow_depth),
         .alu_result_m(alu_result_m), .write_data_m(write_data_m), .rd_m(rd_m),
         .pc_plus_4_in(pc_plus_4_m), .rd_w_out(rd_w_out), .pc_plus_4_m_out(pc_plus_4_m_out),
         .read_data_m(read_data_m),
         .fpu_mem_write(1'b0), .fpu_write_data(32'b0), .parity_check_en(1'b0),
-        .rgb_pclk(rgb_pclk), .rgb_hsync(rgb_hsync), .rgb_vsync(rgb_vsync), .rgb_de(rgb_de),
-        .lcd_reset_n(lcd_reset_n), .lcd_disp(lcd_disp),
-        .rgb_r(rgb_r), .rgb_g(rgb_g), .rgb_b(rgb_b)
+        .rgb_pclk(), .rgb_hsync(), .rgb_vsync(), .rgb_de(),
+        .lcd_reset_n(), .lcd_disp()
     );
     mem_wb_reg u_mem_wb_reg (
-        .clk(clk), .rst_n(rst_n), .flush_w(1'b0), .stall_w(stall_d),
+        .clk(clk), .rst_n(rst_n), .flush_w(1'b0), .stall_w(1'b0),
         .read_data_m(read_data_m), .alu_result_m(alu_result_m), .pc_plus_4_m(pc_plus_4_m_out),
         .rd_m(rd_w_out), .reg_write_m(reg_write_m), .result_src_m(result_src_m),
         .valid_m(valid_m), .valid_w(valid_w), .crypto_en_m(crypto_en_m), .crypto_en_w(crypto_en_w),
@@ -243,13 +266,7 @@ module top_pipeline(
         .reg_write_out(reg_write_loop), .rd_out(rd_loop), .result_w(result_w)
     );
     // Internal experiment counters. They are intentionally not CSRs in v1;
-    // testbenches (and later board telemetry) observe them hierarchically.
-    reg [31:0] mcycle;
-    reg [31:0] minstret;
-    reg [31:0] aes_retired_count;
-    reg [31:0] shadow_push_pop_count;
-    reg [31:0] cfi_check_count;
-    reg [31:0] cfi_violation_count;
+    // testbenches (and OS-0 status MMIO) observe them hierarchically.
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -274,7 +291,9 @@ module top_pipeline(
         end
     end
 
-    assign branch_mispredicted = pred_taken_f ^ pcsrc_e;
+    // With static not-taken policy, only an actually taken branch/jump needs
+    // younger IF/ID and ID/EX instructions flushed.
+    assign branch_mispredicted = pcsrc_e;
     hazard_unit u_hazard_unit (
         .id_ex_mem_read(mem_read_e), .ex_mem_reg_write(reg_write_m), .ex_rd(rd_e),
         .mem_rd(rd_m), .wb_rd(rd_w), .reg_write_w(reg_write_w), .pcsrc_e(pcsrc_e),
@@ -294,15 +313,56 @@ module top_pipeline(
         .update_taken_i(pcsrc_e),
         .update_target_i(pctarget_e)
     );
+    // Diagnostic A: repeat the earlier 8x16 S glyph.  It separates a
+    // multi-character density effect from the newer banner glyph mapping.
+    wire [8:0]  display_x;
+    wire [7:0]  display_y;
+    wire [15:0] display_pixel;
+
+    // Restored OS BIOS display after the RGB quadrant diagnostic confirmed
+    // all data channels, pin mapping and timing are correct.
+    bios_text_renderer u_bios_text_renderer (
+        .x                 (display_x),
+        .y                 (display_y),
+        .security_halted   (security_halted),
+        .mcycle            (mcycle),
+        .minstret          (minstret),
+        .aes_retired_count (aes_retired_count),
+        .shadow_ops        (shadow_push_pop_count),
+        .cfi_checks        (cfi_check_count),
+        .cfi_violations    (cfi_violation_count),
+        .shadow_depth      (shadow_depth),
+        .pixel_out         (display_pixel)
+    );
+
+    rgb_scanout u_rgb_scanout (
+        .clk        (clk),
+        .rst_n      (rst_n),
+        .pixel_in   (display_pixel),
+        .internal_x (display_x),
+        .internal_y (display_y),
+
+        .rgb_pclk   (rgb_pclk),
+        .rgb_hsync  (rgb_hsync),
+        .rgb_vsync  (rgb_vsync),
+        .rgb_de     (rgb_de),
+        .rgb_r      (rgb_r),
+        .rgb_g      (rgb_g),
+        .rgb_b      (rgb_b)
+    );
+
+    assign lcd_reset_n = rst_n;
+    assign lcd_disp    = 1'b1;
 
     // Board-visible evidence path. The reporter snapshots the counters after
     // a fixed execution window and sends one report at 115200 baud.
-    wire uart_report_done;
+    // The fixed status reporter is retained for counter logic during the
+    // transition, but it must not drive UART once CPU MMIO owns the pin.
     uart_status_reporter #(
         .CLK_PER_BIT(234),
         .WAIT_CYCLES(4096)
     ) u_uart_status_reporter (
-        .clk(clk), .rst_n(rst_n), .uart_tx(uart_tx), .report_done(uart_report_done),
+        .clk(clk), .rst_n(rst_n), .uart_tx(), .report_done(),
         .security_halted(security_halted),
         .mcycle(mcycle), .minstret(minstret), .aes_retired_count(aes_retired_count),
         .shadow_push_pop_count(shadow_push_pop_count), .cfi_check_count(cfi_check_count),

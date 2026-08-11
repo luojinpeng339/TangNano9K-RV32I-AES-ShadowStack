@@ -2,13 +2,20 @@
 build/*.vvp
 build/*.log
 build/*.vcd
+build/*.out
 board_build/impl/
 board_build/.cache/
+
+# Gowin IDE per-user project state
+*.user
+board_build/.user
 
 # Temporary ROM backups
 board_images/*.backup
 board_images/test_program.hex.*
+board_build/test_program.hex.pre_*
 
 # Local editor/tool files
 *.tmp
 *.bak
+

@@ -11,6 +11,7 @@ module shadow_stack_mem #(
     output wire [31:0] top_ra,
     output wire        empty,
     output wire        full,
+    output wire [5:0]  depth,
 
     output reg         push_ok,
     output reg         pop_ok,
@@ -26,6 +27,7 @@ module shadow_stack_mem #(
 
     assign empty = (ssp == 0);
     assign full  = (ssp == DEPTH);
+    assign depth = ssp;
 
     // Return a deterministic value on empty; do not index ssp-1 in that case.
     assign top_ra = (ssp == 0) ? 32'b0 : shadow_mem[ssp - 1];

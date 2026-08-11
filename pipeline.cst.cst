@@ -29,12 +29,14 @@ IO_PORT "rgb_r[1]" IO_TYPE=LVCMOS33 DRIVE=8;
 IO_PORT "rgb_r[2]" IO_TYPE=LVCMOS33 DRIVE=8;
 IO_PORT "rgb_r[3]" IO_TYPE=LVCMOS33 DRIVE=8;
 IO_PORT "rgb_r[4]" IO_TYPE=LVCMOS33 DRIVE=8;
-IO_LOC "rgb_g[0]" 29;
-IO_LOC "rgb_g[1]" 30;
-IO_LOC "rgb_g[2]" 57;
-IO_LOC "rgb_g[3]" 68;
-IO_LOC "rgb_g[4]" 69;
-IO_LOC "rgb_g[5]" 70;
+// Released Runtime Emerald board constraints: G[5:4] use SSPI-capable
+// GPIO 56/55; build_fs.tcl explicitly releases SSPI for these LCD lines.
+IO_LOC "rgb_g[0]" 70;
+IO_LOC "rgb_g[1]" 69;
+IO_LOC "rgb_g[2]" 68;
+IO_LOC "rgb_g[3]" 57;
+IO_LOC "rgb_g[4]" 56;
+IO_LOC "rgb_g[5]" 55;
 IO_PORT "rgb_g[0]" IO_TYPE=LVCMOS33 DRIVE=8;
 IO_PORT "rgb_g[1]" IO_TYPE=LVCMOS33 DRIVE=8;
 IO_PORT "rgb_g[2]" IO_TYPE=LVCMOS33 DRIVE=8;
@@ -55,3 +57,5 @@ IO_LOC "lcd_reset_n" 27;
 IO_PORT "lcd_reset_n" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8;
 IO_LOC "lcd_disp" 28;
 IO_PORT "lcd_disp" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8;
+IO_LOC "uart_rx" 18;
+IO_PORT "uart_rx" IO_TYPE=LVCMOS33 PULL_MODE=UP;

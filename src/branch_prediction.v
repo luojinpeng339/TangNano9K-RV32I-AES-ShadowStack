@@ -62,13 +62,13 @@ module BHT_2bit #(
             end
         end else begin
             case (bht_table[write_idx])
-                // --- 如果当前是”强不跳” 00 ---
+                // --- 强不跳 00 ---
                 2'b00: bht_table[write_idx] <= update_taken_i ? 2'b01 : 2'b00;
-                // --- 如果当前是”弱不跳” 01 ---
+                // --- 弱不跳 01 ---
                 2'b01: bht_table[write_idx] <= update_taken_i ? 2'b10 : 2'b00;
-                // --- 如果当前是”弱跳” 10 ---
+                // --- 弱跳10 ---
                 2'b10: bht_table[write_idx] <= update_taken_i ? 2'b11 : 2'b01;
-                // --- 如果当前是”强跳” 11 ---
+                // --- 强跳11 ---
                 2'b11: bht_table[write_idx] <= update_taken_i ? 2'b11 : 2'b10;
                 default: bht_table[write_idx] <= 2'b01;
             endcase
@@ -82,12 +82,12 @@ module BTB #(
     parameter INDEX_LOW  = 7
     )(
     input clk, rst_n,
-    // 读端口（IF阶段）
+    // IF阶段
     input  wire [31:0] pc_i,
     output reg btb_hit_o,// 1=命中，0=未命中
     output reg  [31:0] btb_target_o,// 缓存的目标地址
 
-    // 写端口（EX阶段反馈）
+    // EX阶段反馈
     input  wire [31:0] update_pc_i,
     input  wire        update_valid_i, // 只有真实跳转了才更新
     input  wire [31:0] update_target_i // 底部加法器算出的真实目标
@@ -98,13 +98,13 @@ module BTB #(
     wire [4:0] read_idx  = pc_i[11:7];
     wire [4:0] write_idx = update_pc_i[11:7];
 
-    // 读逻辑：如果valid位为1，说明有记录，视为命中
+    // 读
     always @(*) begin
         btb_hit_o = valid[read_idx];
         btb_target_o = btb[read_idx];
     end
 
-    // 写逻辑：只有真实跳转发生时才把地址存进去
+    // 写
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             for (j = 0; j < ENTRIES; j = j + 1) begin

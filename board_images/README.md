@@ -6,7 +6,7 @@ These are final Tang Nano 9K bitstreams rebuilt after the combinational-read ins
 |---|---|---|
 | `security_cpu_aes_forwarding.fs` | AES32 forwarding | `H=0`, `AR=2`, `SO=0`, `CC=0`, `CV=0` |
 | `security_cpu_shadow_normal.fs` | normal nested calls | `H=0`, `AR=0`, `SO=4`, `CC=2`, `CV=0` |
-| `security_cpu_shadow_attack.fs` | tampered canonical return | `H=1`, `AR=0`, `SO=1`, `CC=1`, `CV=1` |
+| `os0_status_sync_bram.hex` | current OS-0 monitor: prompt + `help` + full `status`; synchronous-BRAM instruction fetch | `SEC-OS0>`, `help: help status`, full `H/MC/MI/AR/SO/CC/CV/SD` report |
 
 The corresponding ROM images are:
 
