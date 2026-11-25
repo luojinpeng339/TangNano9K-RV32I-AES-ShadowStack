@@ -26,7 +26,7 @@ module top_pipeline(
     wire        instr_valid_f;
     wire [31:0] pc_d, pc_plus_4_d, instr_d;
     wire valid_d, valid_e, valid_m, valid_w;
-    wire [31:0] pc_plus_4_e, pc_plus_4_m, pc_plus_4_w;
+    wire [31:0] pc_plus_4_e, pc_plus_4_m;
     wire [31:0] pc_plus_4_m_out;  
     wire [31:0] pc_plus_4_ex;
     wire [31:0] pc_e_in, pctarget_e;
@@ -34,16 +34,22 @@ module top_pipeline(
     wire [31:0] rd1_d, rd2_d, imm_ext_d;
     wire [31:0] rd1_e, rd2_e, imm_ext_e;
     wire [4:0]  rs1_d, rs2_d, rd_d;
-    wire [4:0] rd_loop;
     wire [4:0] rd_e_out; 
     wire [4:0]  rs1_e, rs2_e, rd_e, rd_m, rd_w;
     wire [31:0] alu_result_e, alu_result_m, alu_result_w;
     wire [31:0] write_data_e, write_data_m, read_data_m,read_data_w;
     wire [31:0] result_w;
+    wire rob_alloc_valid, rob_alloc_ready, rob_alloc_fire;
+    wire [2:0] rob_alloc_tag;
+    reg  [2:0] rob_tag_m;
+    wire [31:0] rob_wb_result;
+    wire rob_commit_valid, rob_commit_crypto;
+    wire [2:0] rob_commit_tag;
+    wire [31:0] rob_commit_pc;
     wire        zero_e;
     wire stall_f, stall_d, flush_d, flush_e;
     wire [1:0] forward_ae, forward_be;
-    wire pcsrc_e, jump_e, branch_e;
+    wire pcsrc_e, pcsrc_ex, jump_e, branch_e;
     wire jump_d, alu_src_d, branch_d;
     wire alu_src_e;
     wire crypto_en_d;
@@ -52,7 +58,7 @@ module top_pipeline(
     wire jalr_e;
     wire [1:0] crypto_bs_d;
     wire crypto_en_e;
-    wire crypto_en_m, crypto_en_w;
+    wire crypto_en_m;
     wire crypto_op_e;
     wire [1:0] crypto_bs_e;
     wire zero_m;
@@ -60,8 +66,7 @@ module top_pipeline(
     wire reg_write_e, mem_read_e, mem_write_e;
     wire reg_write_m, mem_read_m, mem_write_m;
     wire reg_write_w;
-    wire reg_write_loop;  
-    wire [1 :0] result_src_d, result_src_e, result_src_m, result_src_w;
+    wire [1 :0] result_src_d, result_src_e, result_src_m;
     wire [2:0] alu_control_d, alu_control_e;
     wire [1:0] imm_src_d;
     wire kexp1i_en_d;
@@ -71,6 +76,7 @@ module top_pipeline(
     wire        shadow_push_en;
     wire [31:0] shadow_push_ra;
     wire        shadow_pop_en;
+    wire        shadow_push_request_e, shadow_pop_request_e;
 
     wire [31:0] shadow_top_ra;
     wire        shadow_empty;
@@ -81,13 +87,19 @@ module top_pipeline(
     wire        shadow_overflow_fault;
     wire        shadow_underflow_fault;
 
-    wire        security_fault_e;
+    wire        security_fault_e, shadow_fault_e;
     wire        cfi_check_e;
     wire        cfi_violation_event_e;
     reg         security_halted;
     wire        stall_f_safe;
     wire        flush_d_safe;
     wire        flush_e_safe;
+    // A full-stack call must fault before it receives a ROB tag.
+    assign security_fault_e = shadow_fault_e || (valid_e && shadow_push_request_e && shadow_full);
+    // The stack still receives a full-stack push to latch its overflow flag.
+    assign shadow_push_en = valid_e && !security_halted && !shadow_fault_e && shadow_push_request_e;
+    assign shadow_pop_en = rob_alloc_fire && shadow_pop_request_e;
+    assign pcsrc_e = rob_alloc_fire && pcsrc_ex;
     assign stall_f_safe = stall_f || security_fault_e || security_halted;
     assign flush_d_safe = flush_d || security_fault_e || security_halted;
     assign flush_e_safe = flush_e || security_fault_e || security_halted;
@@ -141,7 +153,7 @@ module top_pipeline(
         .valid_d(valid_d)
     );
     id_stage u_id_stage (
-        .clk(clk), .instr_d(instr_d), .rd_w(rd_loop), .reg_write_w(reg_write_loop), .result_w(result_w),
+        .clk(clk), .instr_d(instr_d), .rd_w(rd_w), .reg_write_w(reg_write_w), .result_w(result_w),
         .pc_d_in(pc_d), .pc_plus_4_i(pc_plus_4_d), .pc_d_out(),
         .rs1_d(rs1_d), .rs2_d(rs2_d), .rd_d(rd_d), .rd1_d(rd1_d), .rd2_d(rd2_d),
         .imm_ext_d(imm_ext_d), .reg_write_d(reg_write_d), .mem_read_d(mem_read_d),
@@ -206,7 +218,7 @@ module top_pipeline(
         .addr1_e(rd1_e), .addr2_e(rd2_e), .pc_e_in(pc_e_in), .forward_a_e(forward_ae),
         .alu_result_m(alu_result_m), .forward_b_e(forward_be), .imm_ext_e(imm_ext_e), .result_w(result_w),
         .rd_e(rd_e), .pc_plus_4_in(pc_plus_4_e), .pc_plus_4_out(pc_plus_4_ex), .rd_e_out(rd_e_out),
-        .aluresult_e(alu_result_e), .pc_target_e(pctarget_e), .pcsrc_e(pcsrc_e),
+        .aluresult_e(alu_result_e), .pc_target_e(pctarget_e), .pcsrc_e(pcsrc_ex),
         .write_data_e(write_data_e), .zero_e(zero_e),
         .div_start(1'b0), .fpu_start(1'b0),
         .crypto_en_e(crypto_en_e),
@@ -219,18 +231,18 @@ module top_pipeline(
         .shadow_empty(shadow_empty),
         .shadow_overflow_fault(shadow_overflow_fault),
         .shadow_underflow_fault(shadow_underflow_fault),
-        .shadow_push_en(shadow_push_en),
+        .shadow_push_en(shadow_push_request_e),
         .shadow_push_ra(shadow_push_ra),
-        .shadow_pop_en(shadow_pop_en),
-        .security_fault_e(security_fault_e),
+        .shadow_pop_en(shadow_pop_request_e),
+        .security_fault_e(shadow_fault_e),
         .cfi_check_e(cfi_check_e),
         .cfi_violation_event_e(cfi_violation_event_e)
     );
     ex_mem_reg u_ex_mem_reg (
-        .clk(clk), .rst_n(rst_n), .flush_m(1'b0), .stall_m(1'b0),
+        .clk(clk), .rst_n(rst_n), .flush_m(!rob_alloc_fire), .stall_m(1'b0),
         .alu_result_e(alu_result_e), .write_data_e(write_data_e), .pc_plus_4_e(pc_plus_4_ex),
         .zero_e(zero_e), .rd_e(rd_e_out), .reg_write_e(reg_write_e), .mem_write_e(mem_write_e),
-        .valid_e(valid_e), .valid_m(valid_m), .crypto_en_e(crypto_en_e), .crypto_en_m(crypto_en_m),
+        .valid_e(rob_alloc_fire), .valid_m(valid_m), .crypto_en_e(crypto_en_e), .crypto_en_m(crypto_en_m),
         .result_src_e(result_src_e), .alu_result_m(alu_result_m), .write_data_m(write_data_m),
         .pc_plus_4_m(pc_plus_4_m), .zero_m(zero_m), .rd_m(rd_m), .reg_write_m(reg_write_m),
         .mem_write_m(mem_write_m), .result_src_m(result_src_m),
@@ -251,20 +263,49 @@ module top_pipeline(
         .rgb_pclk(), .rgb_hsync(), .rgb_vsync(), .rgb_de(),
         .lcd_reset_n(), .lcd_disp()
     );
+    // Keep the raw WB-stage values available for existing simulation traces.
+    // Register-file writeback and forwarding below use the ROB commit outputs.
     mem_wb_reg u_mem_wb_reg (
         .clk(clk), .rst_n(rst_n), .flush_w(1'b0), .stall_w(1'b0),
         .read_data_m(read_data_m), .alu_result_m(alu_result_m), .pc_plus_4_m(pc_plus_4_m_out),
         .rd_m(rd_w_out), .reg_write_m(reg_write_m), .result_src_m(result_src_m),
-        .valid_m(valid_m), .valid_w(valid_w), .crypto_en_m(crypto_en_m), .crypto_en_w(crypto_en_w),
-        .read_data_w(read_data_w), .alu_result_w(alu_result_w), .pc_plus_4_w(pc_plus_4_w),
-        .rd_w(rd_w), .reg_write_w(reg_write_w), .result_src_w(result_src_w)
+        .valid_m(valid_m), .valid_w(), .crypto_en_m(crypto_en_m), .crypto_en_w(),
+        .read_data_w(read_data_w), .alu_result_w(alu_result_w), .pc_plus_4_w(),
+        .rd_w(), .reg_write_w(), .result_src_w()
     );
+
+    // Allocate only instructions that advance out of EX. The fixed-latency
+    // backend has at most two live entries: one in MEM and one at commit.
+    assign rob_alloc_valid = valid_e && !security_fault_e && !security_halted;
+    assign rob_alloc_fire = rob_alloc_valid && rob_alloc_ready;
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            rob_tag_m <= 3'd0;
+        else if (rob_alloc_fire)
+            rob_tag_m <= rob_alloc_tag;
+    end
+
+    // Select the MEM result before the edge that used to latch MEM/WB.
+    // The ROB stores it on that edge and exposes its head during WB.
     wb_stage u_wb_stage (
-        .reg_write_w(reg_write_w), .result_src_w(result_src_w), .read_data_w(read_data_w),
-        .alu_result_w(alu_result_w), .pc_plus_4_w(pc_plus_4_w), .rd_w(rd_w),
+        .reg_write_w(reg_write_m), .result_src_w(result_src_m), .read_data_w(read_data_m),
+        .alu_result_w(alu_result_m), .pc_plus_4_w(pc_plus_4_m_out), .rd_w(rd_w_out),
         .fpu_result_w(32'b0), .div_result_w(32'b0),
-        .reg_write_out(reg_write_loop), .rd_out(rd_loop), .result_w(result_w)
+        .reg_write_out(), .rd_out(), .result_w(rob_wb_result), .wb_bypass()
     );
+
+    rob u_rob (
+        .clk(clk), .rst_n(rst_n),
+        .alloc_valid(rob_alloc_valid), .alloc_ready(rob_alloc_ready),
+        .alloc_pc(pc_e_in), .alloc_rd(reg_write_e ? rd_e_out : 5'd0),
+        .alloc_crypto(crypto_en_e), .alloc_tag(rob_alloc_tag),
+        .wb_valid(valid_m), .wb_tag(rob_tag_m), .wb_result(rob_wb_result),
+        .commit_valid(rob_commit_valid), .commit_ready(1'b1),
+        .commit_tag(rob_commit_tag), .commit_pc(rob_commit_pc),
+        .commit_rd(rd_w), .commit_result(result_w), .commit_crypto(rob_commit_crypto)
+    );
+    assign valid_w = rob_commit_valid;
+    assign reg_write_w = valid_w && (rd_w != 5'd0);
     // Internal experiment counters. They are intentionally not CSRs in v1;
     // testbenches (and OS-0 status MMIO) observe them hierarchically.
 
@@ -280,7 +321,7 @@ module top_pipeline(
             mcycle <= mcycle + 32'd1;
             if (valid_w)
                 minstret <= minstret + 32'd1;
-            if (valid_w && crypto_en_w)
+            if (valid_w && rob_commit_crypto)
                 aes_retired_count <= aes_retired_count + 32'd1;
             if (shadow_push_ok || shadow_pop_ok)
                 shadow_push_pop_count <= shadow_push_pop_count + 32'd1;

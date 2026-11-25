@@ -29,6 +29,7 @@
         <File path="../src/register_file.v" type="file.verilog" enable="1"/>
         <File path="../src/rgb_scanout.v" type="file.verilog" enable="1"/>
         <File path="../src/scanline_stress_renderer.v" type="file.verilog" enable="1"/>
+        <File path="../src/rob.v" type="file.verilog" enable="1"/>
         <File path="../src/shadow_stack_control.v" type="file.verilog" enable="1"/>
         <File path="../src/shadow_stack_mem.v" type="file.verilog" enable="1"/>
         <File path="../src/top_pipeline.v" type="file.verilog" enable="1"/>
